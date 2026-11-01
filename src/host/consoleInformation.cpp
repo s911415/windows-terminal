@@ -65,8 +65,7 @@ ULONG CONSOLE_INFORMATION::GetCSRecursionCount() const noexcept
     const auto pSelection = &Selection::Instance();
     pSelection->SetLineSelection(!!gci.GetLineSelection());
 
-    SetConsoleCPInfo(TRUE);
-    SetConsoleCPInfo(FALSE);
+    // Code pages and CPInfo are set up in InitializeConsoleCodePage, called from DoCreateScreenBuffer.
 
     // Initialize input buffer.
     try
