@@ -180,6 +180,22 @@ static bool s_IsOnDesktop()
         // below.
 
         Settings temp;
+
+        // ConPTY does honor the client's code page: it only affects how the
+        // client's ANSI console API calls are translated, not how the terminal
+        // renders. Load the user settings into `temp` in the same order as the
+        // branch above; only the code page is copied out of it below.
+        //
+        // LoadFromRegistry also writes two globals through GetEditKeys (the word
+        // delimiters used by cooked-read Ctrl+Arrow, and Alt+F4 handling).
+        // Save and restore them so nothing but the code page is imported.
+        auto& globals = ServiceLocator::LocateGlobals();
+        const auto savedWordDelimiters = globals.WordDelimiters;
+        const auto savedAltF4CloseAllowed = settings.IsAltF4CloseAllowed();
+
+        Registry reg(&temp);
+        reg.LoadDefaultFromRegistry();
+
         // We're not gonna copy over StartupFlags to the main gci settings,
         // because we generally don't think those are valuable in ConPTY mode.
         // However, we do need to apply them to the temp we've created, so that
@@ -187,6 +203,18 @@ static bool s_IsOnDesktop()
         // skip that if STARTF_TITLEISLINKNAME is not set).
         temp.SetStartupFlags(pStartupSettings->GetStartupFlags());
         ServiceLocator::LocateSystemConfigurationProvider()->GetSettingsFromLink(&temp, Title, &TitleLength, CurDir, AppName, nullptr);
+
+        if (!temp.IsStartupTitleIsLinkNameSet())
+        {
+            reg.LoadFromRegistry(Title);
+        }
+
+        globals.WordDelimiters = savedWordDelimiters;
+        settings.SetAltF4CloseAllowed(savedAltF4CloseAllowed);
+
+        // LoadFromRegistry stores the value as-is; keep an invalid one away from GetCPInfo.
+        const auto codePage = temp.GetCodePage();
+        settings.SetCodePage(codePage != 0 && IsValidCodePage(codePage) ? codePage : ServiceLocator::LocateGlobals().uiOEMCP);
     }
 
     // 1. The settings we were passed contains STARTUPINFO structure settings to be applied last.

@@ -5,6 +5,7 @@
 
 #include "_output.h"
 #include "output.h"
+#include "misc.h"
 
 #include "../interactivity/inc/ServiceLocator.hpp"
 #include "../types/inc/Viewport.hpp"
@@ -14,6 +15,25 @@
 
 using namespace Microsoft::Console::Types;
 using namespace Microsoft::Console::Interactivity;
+
+// Applies the configured code page as the active and default input/output code
+// pages. CPInfo must be recomputed after that assignment, not before it, so the
+// DBCS lead byte information matches the code page actually in use.
+void InitializeConsoleCodePage()
+{
+    auto& gci = ServiceLocator::LocateGlobals().getConsoleInformation();
+
+    // For East Asian version, we want to get the code page from the registry or shell32, so we can specify console
+    // codepage by console.cpl or shell32. The default codepage is OEMCP.
+    const auto codePage = gci.GetCodePage();
+    gci.CP = codePage;
+    gci.OutputCP = codePage;
+    gci.DefaultCP = codePage;
+    gci.DefaultOutputCP = codePage;
+
+    SetConsoleCPInfo(TRUE);
+    SetConsoleCPInfo(FALSE);
+}
 
 // This routine figures out what parameters to pass to CreateScreenBuffer based on the data from STARTUPINFO and the
 // registry defaults, and then calls CreateScreenBuffer.
@@ -28,12 +48,7 @@ using namespace Microsoft::Console::Interactivity;
     fiFont.SetCodePage(gci.GetCodePage());
     fiFont.SetPixelCellSize(gci.GetFontSize());
 
-    // For East Asian version, we want to get the code page from the registry or shell32, so we can specify console
-    // codepage by console.cpl or shell32. The default codepage is OEMCP.
-    gci.CP = gci.GetCodePage();
-    gci.OutputCP = gci.GetCodePage();
-    gci.DefaultCP = gci.GetCodePage();
-    gci.DefaultOutputCP = gci.GetCodePage();
+    InitializeConsoleCodePage();
 
     gci.Flags |= CONSOLE_USE_PRIVATE_FLAGS;
 

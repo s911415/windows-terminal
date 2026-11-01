@@ -68,7 +68,8 @@ void SystemConfigurationProvider::GetSettingsFromLink(
     WCHAR wszIconLocation[MAX_PATH] = { 0 };
     auto iIconIndex = 0;
 
-    pLinkSettings->SetCodePage(ServiceLocator::LocateGlobals().uiOEMCP);
+    // Keep the caller's code page (OEMCP, or the HKCU\Console default). Far East
+    // shortcut properties override it below; the exit check rejects invalid values.
 
     // Did we get started from a link?
     if (pLinkSettings->GetStartupFlags() & STARTF_TITLEISLINKNAME)
